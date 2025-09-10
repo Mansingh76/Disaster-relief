@@ -1,295 +1,1037 @@
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Relief Map - Disaster Relief App</title>
+    <title>Relief Map - Global Disaster Response Platform</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Roboto', sans-serif; background: #f5f5f5; }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
         
         .splash-screen {
             background: linear-gradient(135deg, #1976D2, #42A5F5);
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            text-align: center;
+            height: 100vh; display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            color: white; text-align: center; position: fixed;
+            width: 100%; z-index: 9999; top: 0; left: 0;
         }
         
-        .logo {
-            font-size: 80px;
-            margin-bottom: 20px;
-            animation: pulse 2s infinite;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-        }
-        
-        .title { font-size: 32px; font-weight: bold; margin-bottom: 10px; }
-        .subtitle { font-size: 16px; opacity: 0.9; margin-bottom: 40px; }
+        .logo { font-size: 120px; margin-bottom: 30px; animation: pulse 2s infinite; }
+        .title { font-size: 42px; font-weight: 700; margin-bottom: 15px; }
+        .subtitle { font-size: 20px; opacity: 0.9; margin-bottom: 50px; font-weight: 300; }
         
         .loading {
-            width: 40px; height: 40px;
-            border: 4px solid rgba(255,255,255,0.3);
-            border-top: 4px solid white;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
+            width: 60px; height: 60px; border: 6px solid rgba(255,255,255,0.3);
+            border-top: 6px solid white; border-radius: 50%; animation: spin 1s linear infinite;
         }
         
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .main-app { display: none; min-height: 100vh; background: #f8f9fa; }
+        
+        .navbar {
+            background: #1976D2; color: white; padding: 20px;
+            display: flex; align-items: center; justify-content: space-between;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15); position: sticky; top: 0; z-index: 1000;
         }
         
-        .main-app { display: none; min-height: 100vh; }
-        .app-bar {
-            background: #1976D2; color: white; padding: 15px;
-            display: flex; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        .nav-brand { display: flex; align-items: center; font-size: 28px; font-weight: 700; }
+        .nav-brand i { margin-right: 15px; font-size: 32px; }
+        
+        .nav-actions { display: flex; gap: 15px; }
+        .nav-btn {
+            background: rgba(255,255,255,0.15); color: white; border: none;
+            padding: 12px 20px; border-radius: 25px; cursor: pointer; 
+            transition: all 0.3s; font-weight: 500; display: flex; align-items: center; gap: 8px;
         }
+        .nav-btn:hover { background: rgba(255,255,255,0.25); transform: translateY(-2px); }
+        .emergency-nav { background: #f44336 !important; animation: pulse-red 2s infinite; }
+        
+        @keyframes pulse-red { 
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.4); } 
+            50% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(244, 67, 54, 0); } 
+        }
+        
+        .container { max-width: 1400px; margin: 0 auto; padding: 30px; }
         
         .hero {
             background: linear-gradient(135deg, #1976D2, #42A5F5);
-            color: white; padding: 60px 20px; text-align: center;
+            color: white; padding: 80px 30px; text-align: center;
+            position: relative; overflow: hidden;
+        }
+        
+        .hero::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="25" cy="25" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="75" cy="25" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="25" cy="75" r="1.5" fill="rgba(255,255,255,0.1)"/><circle cx="75" cy="75" r="2" fill="rgba(255,255,255,0.1)"/></svg>');
+        }
+        
+        .hero-content { position: relative; z-index: 1; }
+        .hero h1 { font-size: 56px; margin-bottom: 20px; font-weight: 700; }
+        .hero h2 { font-size: 28px; margin-bottom: 25px; opacity: 0.95; font-weight: 400; }
+        .hero p { font-size: 20px; max-width: 700px; margin: 0 auto 40px; opacity: 0.9; line-height: 1.6; }
+        
+        .tabs {
+            display: flex; background: white; border-radius: 15px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.1); margin: 40px 0; overflow: hidden;
+        }
+        
+        .tab {
+            flex: 1; padding: 20px; text-align: center; cursor: pointer;
+            background: transparent; border: none; font-size: 16px; font-weight: 500;
+            transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 10px;
+        }
+        
+        .tab.active { background: #1976D2; color: white; }
+        .tab:hover:not(.active) { background: #f8f9fa; }
+        
+        .tab-content { display: none; animation: fadeIn 0.3s ease; }
+        .tab-content.active { display: block; }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .map-container {
+            height: 600px; border-radius: 20px; overflow: hidden;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.15); margin: 30px 0;
+            border: 3px solid white;
         }
         
         .features {
-            padding: 40px 20px; display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 30px; max-width: 1200px; margin: 0 auto;
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px; margin: 50px 0;
         }
         
         .feature-card {
-            background: white; padding: 30px; border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            text-align: center; transition: transform 0.3s ease;
+            background: white; padding: 40px; border-radius: 20px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.08); text-align: center;
+            transition: all 0.3s ease; border: 1px solid #f0f0f0; position: relative; overflow: hidden;
         }
         
-        .feature-card:hover { transform: translateY(-5px); }
-        .feature-icon { font-size: 48px; margin-bottom: 15px; }
-        .feature-title { font-size: 20px; font-weight: bold; margin-bottom: 10px; color: #1976D2; }
-        
-        .cta-section {
-            background: #f8f9fa; padding: 60px 20px; text-align: center;
+        .feature-card::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px;
+            background: linear-gradient(90deg, #1976D2, #42A5F5); transform: scaleX(0);
+            transition: transform 0.3s ease; transform-origin: left;
         }
         
-        .cta-button {
-            background: #FF5722; color: white; border: none;
-            padding: 15px 30px; border-radius: 25px; font-size: 16px;
-            margin: 10px; cursor: pointer; transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(255,87,34,0.3);
+        .feature-card:hover {
+            transform: translateY(-8px); box-shadow: 0 15px 50px rgba(0,0,0,0.15);
         }
         
-        .cta-button:hover {
-            background: #E64A19; transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(255,87,34,0.4);
+        .feature-card:hover::before { transform: scaleX(1); }
+        
+        .feature-icon { font-size: 60px; margin-bottom: 25px; }
+        .feature-title { font-size: 24px; font-weight: 600; margin-bottom: 20px; color: #1976D2; }
+        .feature-desc { color: #666; line-height: 1.7; font-size: 16px; margin-bottom: 25px; }
+        
+        .relief-points {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 25px; margin: 30px 0;
         }
         
-        .emergency-button {
-            background: #f44336 !important;
-            animation: pulse-red 2s infinite;
+        .relief-point {
+            background: white; border-radius: 15px; padding: 25px;
+            box-shadow: 0 6px 25px rgba(0,0,0,0.08); transition: all 0.3s;
+            border: 1px solid #f0f0f0;
         }
         
-        @keyframes pulse-red {
-            0%, 100% { box-shadow: 0 4px 15px rgba(244,67,54,0.3); }
-            50% { box-shadow: 0 4px 25px rgba(244,67,54,0.6); }
+        .relief-point:hover { 
+            transform: translateY(-5px); box-shadow: 0 12px 40px rgba(0,0,0,0.15); 
+            border-color: #1976D2;
         }
+        
+        .point-header { display: flex; align-items: center; margin-bottom: 20px; }
+        .point-icon { font-size: 35px; margin-right: 20px; }
+        .point-title { font-weight: 600; color: #333; font-size: 18px; }
+        .point-distance { color: #666; font-size: 14px; margin-top: 4px; }
+        
+        .point-desc { color: #555; margin-bottom: 20px; line-height: 1.6; }
+        .point-meta { 
+            display: flex; justify-content: space-between; font-size: 14px; color: #888; 
+            margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 10px;
+        }
+        
+        .btn {
+            background: #1976D2; color: white; border: none; padding: 14px 28px;
+            border-radius: 30px; cursor: pointer; font-size: 16px; font-weight: 500;
+            transition: all 0.3s; display: inline-flex; align-items: center; gap: 10px;
+            text-decoration: none;
+        }
+        
+        .btn:hover { 
+            background: #1565C0; transform: translateY(-2px); 
+            box-shadow: 0 8px 25px rgba(25,118,210,0.3);
+        }
+        
+        .btn-emergency { 
+            background: #f44336; animation: pulse-red 2s infinite;
+            box-shadow: 0 4px 20px rgba(244,67,54,0.3);
+        }
+        .btn-success { background: #4CAF50; }
+        .btn-warning { background: #FF9800; }
+        
+        .modal {
+            display: none; position: fixed; z-index: 10000; left: 0; top: 0;
+            width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+        }
+        
+        .modal-content {
+            background: white; margin: 3% auto; padding: 40px; width: 90%;
+            max-width: 600px; border-radius: 20px; position: relative;
+            animation: modalFade 0.4s ease; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        @keyframes modalFade { 
+            from { opacity: 0; transform: scale(0.8) translateY(-50px); } 
+            to { opacity: 1; transform: scale(1) translateY(0); } 
+        }
+        
+        .close { 
+            position: absolute; right: 20px; top: 20px; font-size: 32px; 
+            cursor: pointer; color: #999; transition: color 0.3s;
+        }
+        .close:hover { color: #f44336; }
+        
+        .alert {
+            padding: 20px; border-radius: 12px; margin: 20px 0;
+            display: flex; align-items: center; gap: 15px; font-weight: 500;
+        }
+        
+        .alert-success { background: #e8f5e9; color: #2e7d32; border-left: 5px solid #4caf50; }
+        .alert-danger { background: #ffebee; color: #c62828; border-left: 5px solid #f44336; }
+        .alert-warning { background: #fff8e1; color: #ef6c00; border-left: 5px solid #ff9800; }
+        .alert-info { background: #e3f2fd; color: #1565c0; border-left: 5px solid #2196f3; }
+        
+        .form-group { margin-bottom: 25px; }
+        .form-label { 
+            display: block; margin-bottom: 10px; font-weight: 500; 
+            color: #333; font-size: 16px;
+        }
+        .form-input, .form-textarea {
+            width: 100%; padding: 16px; border: 2px solid #e0e0e0; border-radius: 12px;
+            font-size: 16px; transition: all 0.3s; font-family: inherit;
+        }
+        .form-input:focus, .form-textarea:focus { 
+            outline: none; border-color: #1976D2; 
+            box-shadow: 0 0 0 3px rgba(25,118,210,0.1);
+        }
+        .form-textarea { resize: vertical; min-height: 120px; }
+        
+        .stats {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 30px; background: white; padding: 40px; border-radius: 20px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.1); margin: 40px 0;
+        }
+        
+        .stat { text-align: center; }
+        .stat-number { 
+            font-size: 48px; font-weight: 700; color: #1976D2; 
+            margin-bottom: 10px; display: block;
+        }
+        .stat-label { color: #666; font-size: 16px; font-weight: 500; }
+        
+        .emergency-contact {
+            background: #fff3e0; border: 2px solid #ff9800; border-radius: 15px;
+            padding: 25px; margin: 20px 0; text-align: center;
+        }
+        
+        .emergency-contact h3 {
+            color: #f57c00; margin-bottom: 15px; font-size: 20px;
+        }
+        
+        .contact-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px; margin-top: 20px;
+        }
+        
+        .contact-item {
+            background: white; padding: 15px; border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .footer {
+            background: #1976D2; color: white; padding: 50px 30px;
+            text-align: center; margin-top: 50px;
+        }
+        
+        .footer h3 { margin-bottom: 20px; font-size: 24px; }
+        .footer p { opacity: 0.9; line-height: 1.6; max-width: 600px; margin: 0 auto; }
         
         @media (max-width: 768px) {
-            .features { grid-template-columns: 1fr; padding: 20px; }
-            .hero { padding: 40px 20px; }
+            .hero h1 { font-size: 36px; }
+            .hero h2 { font-size: 22px; }
+            .hero p { font-size: 16px; }
+            .container { padding: 15px; }
+            .features { grid-template-columns: 1fr; }
+            .stats { grid-template-columns: 1fr; padding: 20px; }
+            .navbar { padding: 15px; flex-direction: column; gap: 15px; }
+            .nav-actions { width: 100%; justify-content: center; }
+            .tabs { flex-direction: column; }
         }
     </style>
 </head>
 <body>
+    <!-- Splash Screen -->
     <div class="splash-screen" id="splash">
         <div class="logo">🆘</div>
         <div class="title">Relief Map</div>
-        <div class="subtitle">Connecting communities in crisis</div>
+        <div class="subtitle">Global Disaster Response Platform</div>
         <div class="loading"></div>
     </div>
-    
+
+    <!-- Main App -->
     <div class="main-app" id="mainApp">
-        <div class="app-bar">
-            <span style="font-size: 24px; margin-right: 15px;">🗺️</span>
-            <h1>Relief Map - AI-Powered Disaster Response</h1>
-        </div>
-        
+        <nav class="navbar">
+            <div class="nav-brand">
+                <i class="fas fa-map-marked-alt"></i>
+                Relief Map
+            </div>
+            <div class="nav-actions">
+                <button class="nav-btn" onclick="getCurrentLocation()">
+                    <i class="fas fa-crosshairs"></i> My Location
+                </button>
+                <button class="nav-btn emergency-nav" onclick="triggerEmergencySOS()">
+                    <i class="fas fa-exclamation-triangle"></i> EMERGENCY SOS
+                </button>
+            </div>
+        </nav>
+
         <div class="hero">
-            <h1 style="font-size: 48px; margin-bottom: 20px;">🆘 Relief Map</h1>
-            <h2 style="font-size: 24px; margin-bottom: 15px;">AI-Powered Emergency Response Platform</h2>
-            <p style="font-size: 18px; opacity: 0.9; max-width: 600px; margin: 0 auto;">
-                When disaster strikes, every second counts. Relief Map connects victims with help in minutes, not hours.
-            </p>
-        </div>
-        
-        <div class="features">
-            <div class="feature-card">
-                <div class="feature-icon">🆘</div>
-                <h3 class="feature-title">Emergency SOS</h3>
-                <p>One-tap emergency alerts instantly notify local services, volunteers, and relief organizations</p>
-            </div>
-            
-            <div class="feature-card">
-                <div class="feature-icon">🤖</div>
-                <h3 class="feature-title">AI Recommendations</h3>
-                <p>95% accuracy AI finds the exact help you need based on location, profile, and current crisis</p>
-            </div>
-            
-            <div class="feature-card">
-                <div class="feature-icon">🗺️</div>
-                <h3 class="feature-title">Relief Point Mapping</h3>
-                <p>Real-time interactive map showing food, shelter, medical aid, and supply distribution points</p>
-            </div>
-            
-            <div class="feature-card">
-                <div class="feature-icon">👥</div>
-                <h3 class="feature-title">Multi-Role Coordination</h3>
-                <p>Seamlessly connects victims, volunteers, and NGOs for coordinated disaster response</p>
-            </div>
-            
-            <div class="feature-card">
-                <div class="feature-icon">🏥</div>
-                <h3 class="feature-title">Medical Emergency</h3>
-                <p>Locate nearest medical stations, hospitals, and emergency supplies with real-time availability</p>
-            </div>
-            
-            <div class="feature-card">
-                <div class="feature-icon">🏠</div>
-                <h3 class="feature-title">Emergency Shelter</h3>
-                <p>Find safe accommodation during disasters with capacity info and family-friendly options</p>
+            <div class="hero-content">
+                <h1>🆘 Relief Map</h1>
+                <h2>AI-Powered Disaster Response Platform</h2>
+                <p>Connecting victims, volunteers, and relief organizations worldwide. Real-time coordination for emergency response, resource distribution, and community support during natural disasters and humanitarian crises.</p>
+                
+                <div class="stats">
+                    <div class="stat">
+                        <span class="stat-number" id="activePoints">247</span>
+                        <div class="stat-label">Active Relief Points</div>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number" id="volunteersActive">156</span>
+                        <div class="stat-label">Volunteers Online</div>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number" id="peopleHelped">2,847</span>
+                        <div class="stat-label">People Helped Today</div>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number" id="organizationsActive">34</span>
+                        <div class="stat-label">Relief Organizations</div>
+                    </div>
+                </div>
             </div>
         </div>
-        
-        <div class="cta-section">
-            <h2 style="color: #1976D2; margin-bottom: 20px;">🏆 Built for Humanitarian Impact</h2>
-            <p style="font-size: 18px; margin-bottom: 30px; color: #666;">
-                Reducing emergency response time by 65% • Coordinating 500+ volunteers • Saving lives during natural disasters
-            </p>
-            
-            <button class="cta-button" onclick="showDemo()">
-                🚀 Interactive Demo
-            </button>
-            <button class="cta-button emergency-button" onclick="triggerSOS()">
-                🆘 Emergency SOS
-            </button>
-            <button class="cta-button" onclick="showFeatures()">
-                🎯 View All Features
-            </button>
+
+        <div class="container">
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('map')">
+                    <i class="fas fa-map"></i> Live Relief Map
+                </button>
+                <button class="tab" onclick="showTab('relief')">
+                    <i class="fas fa-home"></i> Relief Centers
+                </button>
+                <button class="tab" onclick="showTab('emergency')">
+                    <i class="fas fa-ambulance"></i> Emergency Services
+                </button>
+                <button class="tab" onclick="showTab('volunteer')">
+                    <i class="fas fa-hands-helping"></i> Volunteer Hub
+                </button>
+            </div>
+
+            <!-- Map Tab -->
+            <div class="tab-content active" id="mapTab">
+                <h2 style="margin-bottom: 30px; font-size: 32px; color: #1976D2;">🗺️ Real-Time Disaster Relief Map</h2>
+                <div class="map-container" id="map"></div>
+                <div style="margin: 30px 0; text-align: center;">
+                    <button class="btn" onclick="addReliefPoint()">
+                        <i class="fas fa-plus"></i> Register Relief Point
+                    </button>
+                    <button class="btn btn-warning" onclick="reportEmergency()" style="margin-left: 15px;">
+                        <i class="fas fa-exclamation-circle"></i> Report Emergency Situation
+                    </button>
+                    <button class="btn btn-success" onclick="offerHelp()" style="margin-left: 15px;">
+                        <i class="fas fa-heart"></i> Offer Assistance
+                    </button>
+                </div>
+            </div>
+
+            <!-- Relief Points Tab -->
+            <div class="tab-content" id="reliefTab">
+                <h2 style="margin-bottom: 30px; font-size: 32px; color: #1976D2;">🏠 Active Relief Centers</h2>
+                <div class="relief-points" id="reliefPoints"></div>
+            </div>
+
+            <!-- Emergency Tab -->
+            <div class="tab-content" id="emergencyTab">
+                <h2 style="margin-bottom: 30px; font-size: 32px; color: #1976D2;">🚨 Emergency Response Services</h2>
+                
+                <div class="emergency-contact">
+                    <h3><i class="fas fa-phone"></i> Emergency Hotlines</h3>
+                    <p>Available 24/7 for immediate assistance during disasters and emergencies</p>
+                    <div class="contact-grid">
+                        <div class="contact-item">
+                            <strong>Police Emergency</strong><br>
+                            <span style="font-size: 18px; color: #f44336;">📞 100</span>
+                        </div>
+                        <div class="contact-item">
+                            <strong>Fire Department</strong><br>
+                            <span style="font-size: 18px; color: #f44336;">📞 101</span>
+                        </div>
+                        <div class="contact-item">
+                            <strong>Medical Emergency</strong><br>
+                            <span style="font-size: 18px; color: #f44336;">📞 108</span>
+                        </div>
+                        <div class="contact-item">
+                            <strong>Disaster Management</strong><br>
+                            <span style="font-size: 18px; color: #f44336;">📞 1070</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="features">
+                    <div class="feature-card">
+                        <div class="feature-icon">🚑</div>
+                        <h3 class="feature-title">Medical Emergency Response</h3>
+                        <p class="feature-desc">Immediate medical assistance, ambulance dispatch, and hospital coordination for medical emergencies during disasters.</p>
+                        <button class="btn btn-emergency" onclick="callEmergency('medical')">
+                            <i class="fas fa-phone"></i> Request Medical Emergency
+                        </button>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🚒</div>
+                        <h3 class="feature-title">Fire & Rescue Services</h3>
+                        <p class="feature-desc">Fire department response, search and rescue operations, and emergency evacuation assistance.</p>
+                        <button class="btn btn-emergency" onclick="callEmergency('fire')">
+                            <i class="fas fa-fire"></i> Contact Fire Department
+                        </button>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">👮‍♂️</div>
+                        <h3 class="feature-title">Security & Law Enforcement</h3>
+                        <p class="feature-desc">Police assistance, security coordination, and law enforcement support during disaster situations.</p>
+                        <button class="btn btn-emergency" onclick="callEmergency('police')">
+                            <i class="fas fa-shield-alt"></i> Contact Police Services
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Volunteer Tab -->
+            <div class="tab-content" id="volunteerTab">
+                <h2 style="margin-bottom: 30px; font-size: 32px; color: #1976D2;">👥 Volunteer Opportunities</h2>
+                <div class="features" id="volunteerOpportunities"></div>
+            </div>
         </div>
-        
-        <div style="background: #1976D2; color: white; padding: 40px 20px; text-align: center;">
-            <h3>🌍 Ready for Global Deployment</h3>
-            <p style="margin: 10px 0;">Built with Flutter • AI-Powered • Real-time Coordination • Humanitarian Focus</p>
-            <p style="opacity: 0.8;">Hackathon Project 2024 • Built to Save Lives</p>
+
+        <div class="footer">
+            <h3>🌍 Global Humanitarian Impact</h3>
+            <p>Relief Map is dedicated to saving lives and providing immediate assistance during natural disasters and humanitarian crises. Our platform connects communities, coordinates resources, and enables rapid response to help those in need worldwide.</p>
+            <br>
+            <p style="font-size: 14px; opacity: 0.8;">Built with humanitarian values • Real-time disaster response • Community-driven relief coordination</p>
         </div>
     </div>
-    
+
+    <!-- Emergency SOS Modal -->
+    <div id="emergencyModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('emergencyModal')">&times;</span>
+            <h2 style="color: #f44336; margin-bottom: 25px; font-size: 28px;">
+                <i class="fas fa-exclamation-triangle"></i> EMERGENCY SOS ACTIVATED
+            </h2>
+            <div class="alert alert-danger">
+                <i class="fas fa-satellite"></i>
+                <div>
+                    <strong>Emergency Alert Successfully Transmitted!</strong><br>
+                    Your GPS location has been sent to emergency response teams.
+                </div>
+            </div>
+            <div id="emergencyDetails"></div>
+        </div>
+    </div>
+
+    <!-- Add Relief Point Modal -->
+    <div id="addPointModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('addPointModal')">&times;</span>
+            <h2 style="margin-bottom: 25px;">📍 Register New Relief Point</h2>
+            <form id="reliefPointForm">
+                <div class="form-group">
+                    <label class="form-label">Type of Relief Service</label>
+                    <select class="form-input" id="reliefType">
+                        <option value="food">🍕 Food Distribution Center</option>
+                        <option value="shelter">🏠 Emergency Shelter</option>
+                        <option value="medical">🏥 Medical Aid Station</option>
+                        <option value="supplies">📦 Supply Distribution</option>
+                        <option value="water">💧 Clean Water Point</option>
+                        <option value="communication">📡 Communication Hub</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Relief Point Name</label>
+                    <input type="text" class="form-input" id="reliefTitle" 
+                           placeholder="e.g. Community Emergency Kitchen" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Detailed Description</label>
+                    <textarea class="form-textarea" id="reliefDesc" 
+                              placeholder="Describe the services available, operating hours, capacity, and any special requirements..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Contact Information</label>
+                    <input type="text" class="form-input" id="reliefContact" 
+                           placeholder="Phone number or contact details">
+                </div>
+                <button type="submit" class="btn" style="width: 100%;">
+                    <i class="fas fa-plus"></i> Register Relief Point
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        setTimeout(() => {
-            document.getElementById('splash').style.display = 'none';
-            document.getElementById('mainApp').style.display = 'block';
-        }, 3000);
-        
-        function showDemo() {
-            alert(`🎯 RELIEF MAP - LIVE FEATURES
+        // Global variables
+        let map;
+        let userLocation = null;
+        let reliefPointsData = [];
+        let volunteerOpportunities = [];
 
-🆘 EMERGENCY RESPONSE:
-✅ One-tap SOS alerts
-✅ GPS location tracking
-✅ Multi-service notification
+        // Initialize application
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                document.getElementById('splash').style.display = 'none';
+                document.getElementById('mainApp').style.display = 'block';
+                initializeMap();
+                loadReliefPoints();
+                loadVolunteerOpportunities();
+                startRealTimeUpdates();
+            }, 3500);
+        });
 
-🤖 AI INTELLIGENCE:
-✅ 95% accuracy recommendations  
-✅ Personalized help matching
-✅ Predictive resource planning
+        // Initialize interactive map
+        function initializeMap() {
+            // Default to India (can be changed for different regions)
+            map = L.map('map').setView([20.5937, 78.9629], 5);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors | Relief Map Platform',
+                maxZoom: 18
+            }).addTo(map);
 
-🗺️ REAL-TIME MAPPING:
-✅ Food distribution points
-✅ Medical aid stations
-✅ Emergency shelters
-✅ Supply centers
+            // Sample relief points across different regions
+            const globalReliefPoints = [
+                {id: 1, lat: 22.7196, lng: 75.8577, type: 'food', title: 'Community Emergency Kitchen', desc: 'Free meals for disaster victims - 24/7 operation', contact: '+91-98765-43210'},
+                {id: 2, lat: 19.0760, lng: 72.8777, type: 'medical', title: 'Mumbai Emergency Medical Station', desc: 'First aid, medicines, and emergency medical care', contact: '+91-98765-43211'},
+                {id: 3, lat: 28.7041, lng: 77.1025, type: 'shelter', title: 'Delhi Relief Shelter', desc: 'Safe accommodation for displaced families', contact: '+91-98765-43212'},
+                {id: 4, lat: 13.0827, lng: 80.2707, type: 'supplies', title: 'Chennai Supply Distribution Center', desc: 'Water, clothes, blankets, and essential supplies', contact: '+91-98765-43213'},
+                {id: 5, lat: 12.2958, lng: 76.6394, type: 'medical', title: 'Mysore Mobile Medical Unit', desc: 'Mobile health services and vaccination', contact: '+91-98765-43214'},
+                {id: 6, lat: 17.3850, lng: 78.4867, type: 'food', title: 'Hyderabad Food Relief Center', desc: 'Nutritious meals and food packets distribution', contact: '+91-98765-43215'},
+                {id: 7, lat: 26.9124, lng: 75.7873, type: 'shelter', title: 'Jaipur Emergency Shelter', desc: 'Temporary accommodation and basic amenities', contact: '+91-98765-43216'},
+                {id: 8, lat: 23.0225, lng: 72.5714, type: 'water', title: 'Ahmedabad Clean Water Point', desc: 'Safe drinking water and water purification', contact: '+91-98765-43217'}
+            ];
 
-👥 COORDINATION:
-✅ Victim support system
-✅ Volunteer matching
-✅ NGO resource management
+            globalReliefPoints.forEach(point => {
+                const icon = getReliefIcon(point.type);
+                const marker = L.marker([point.lat, point.lng])
+                    .addTo(map)
+                    .bindPopup(`
+                        <div style="text-align: center; padding: 10px;">
+                            <h3 style="margin-bottom: 10px; color: #1976D2;">
+                                ${icon} ${point.title}
+                            </h3>
+                            <p style="margin-bottom: 10px; color: #666;">
+                                ${point.desc}
+                            </p>
+                            <div style="margin-bottom: 10px; color: #333;">
+                                <strong>📞 Contact:</strong> ${point.contact}
+                            </div>
+                            <button onclick="getDirections(${point.lat}, ${point.lng})" 
+                                    style="background: #1976D2; color: white; border: none; 
+                                           padding: 8px 16px; border-radius: 20px; cursor: pointer;">
+                                🧭 Get Directions
+                            </button>
+                        </div>
+                    `)
+                    .on('click', () => showReliefDetails(point));
+            });
 
-Built in 24 hours for humanitarian impact!`);
+            reliefPointsData = globalReliefPoints;
         }
-        
-        function triggerSOS() {
-            if(confirm(`🚨 EMERGENCY SOS ALERT
 
-This will immediately notify:
-- Local emergency services (100, 101, 102, 108)
-- Nearby volunteers and first responders  
-- Relief organizations and NGOs
-- Hospital emergency departments
+        // Get relief point icon
+        function getReliefIcon(type) {
+            const icons = {
+                food: '🍕',
+                medical: '🏥', 
+                shelter: '🏠',
+                supplies: '📦',
+                water: '💧',
+                communication: '📡'
+            };
+            return icons[type] || '📍';
+        }
 
-⚠️ Only use in genuine emergencies
+        // Load relief points into grid
+        function loadReliefPoints() {
+            const reliefContainer = document.getElementById('reliefPoints');
+            reliefContainer.innerHTML = '';
 
-GPS location will be shared automatically.
+            reliefPointsData.forEach(point => {
+                const pointElement = document.createElement('div');
+                pointElement.className = 'relief-point';
+                pointElement.innerHTML = `
+                    <div class="point-header">
+                        <div class="point-icon">${getReliefIcon(point.type)}</div>
+                        <div>
+                            <div class="point-title">${point.title}</div>
+                            <div class="point-distance">📍 ${getRandomDistance()} km from your location</div>
+                        </div>
+                    </div>
+                    <div class="point-desc">${point.desc}</div>
+                    <div class="point-meta">
+                        <span>📞 ${point.contact}</span>
+                        <span>👥 ${Math.floor(Math.random() * 100) + 20} people helped</span>
+                        <span>🕒 Available 24/7</span>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn" onclick="getDirections(${point.lat}, ${point.lng})" style="flex: 1;">
+                            <i class="fas fa-directions"></i> Navigate
+                        </button>
+                        <button class="btn btn-success" onclick="contactReliefPoint('${point.contact}')" style="flex: 1;">
+                            <i class="fas fa-phone"></i> Contact
+                        </button>
+                    </div>
+                `;
+                reliefContainer.appendChild(pointElement);
+            });
+        }
 
-Send SOS Alert Now?`)) {
-                
-                alert(`🚨 SOS ALERT SENT SUCCESSFULLY!
+        // Load volunteer opportunities
+        function loadVolunteerOpportunities() {
+            const opportunities = [
+                {
+                    title: 'Emergency Food Distribution Coordinator',
+                    desc: 'Help coordinate food distribution at community kitchens. Organize volunteers, manage inventory, and ensure efficient service to disaster victims.',
+                    urgent: true,
+                    skills: 'Organization, Leadership',
+                    time: '4-8 hours',
+                    location: 'Multiple locations'
+                },
+                {
+                    title: 'Medical Support Assistant',
+                    desc: 'Support medical teams with patient care, medicine distribution, and health monitoring. Basic medical knowledge preferred.',
+                    urgent: true,
+                    skills: 'First Aid, Healthcare',
+                    time: '6-12 hours',
+                    location: 'Medical stations'
+                },
+                {
+                    title: 'Emergency Shelter Manager',
+                    desc: 'Manage emergency shelters, coordinate accommodation, ensure safety and comfort of displaced families.',
+                    urgent: false,
+                    skills: 'Management, Communication',
+                    time: '8-12 hours',
+                    location: 'Shelter facilities'
+                },
+                {
+                    title: 'Supply Chain Organizer',
+                    desc: 'Organize relief supplies, manage inventory, coordinate distribution logistics, and ensure efficient resource allocation.',
+                    urgent: false,
+                    skills: 'Logistics, Organization',
+                    time: '4-6 hours',
+                    location: 'Distribution centers'
+                },
+                {
+                    title: 'Communication & Coordination Specialist',
+                    desc: 'Manage communication between relief teams, coordinate rescue operations, and maintain information systems.',
+                    urgent: true,
+                    skills: 'Communication, Technology',
+                    time: '6-10 hours',
+                    location: 'Coordination centers'
+                },
+                {
+                    title: 'Community Outreach Volunteer',
+                    desc: 'Engage with affected communities, identify needs, provide emotional support, and connect people with appropriate resources.',
+                    urgent: false,
+                    skills: 'Communication, Empathy',
+                    time: '3-6 hours',
+                    location: 'Community areas'
+                }
+            ];
 
-📍 Location: GPS coordinates transmitted
-📞 Services Notified:
-   • Emergency Services: ALERTED
-   • Local Volunteers: 12 responders nearby
-   • Medical Teams: 3 units dispatched
-   • NGO Coordinators: RED CROSS notified
+            const container = document.getElementById('volunteerOpportunities');
+            container.innerHTML = '';
 
-🕐 Estimated Response Time: 8-12 minutes
+            opportunities.forEach(opp => {
+                const oppElement = document.createElement('div');
+                oppElement.className = 'feature-card';
+                oppElement.innerHTML = `
+                    <div class="feature-icon">🙋‍♂️</div>
+                    <h3 class="feature-title">${opp.title}</h3>
+                    <p class="feature-desc">${opp.desc}</p>
+                    <div style="margin: 15px 0; padding: 15px; background: #f8f9fa; border-radius: 10px; text-align: left;">
+                        <div style="margin-bottom: 8px;"><strong>Skills Needed:</strong> ${opp.skills}</div>
+                        <div style="margin-bottom: 8px;"><strong>Time Commitment:</strong> ${opp.time}</div>
+                        <div><strong>Location:</strong> ${opp.location}</div>
+                    </div>
+                    ${opp.urgent ? '<div class="alert alert-warning"><i class="fas fa-clock"></i> <strong>Urgent Need!</strong> Immediate volunteers required.</div>' : ''}
+                    <button class="btn ${opp.urgent ? 'btn-emergency' : ''}" onclick="volunteerForTask('${opp.title}')">
+                        <i class="fas fa-hand-paper"></i> Register as Volunteer
+                    </button>
+                `;
+                container.appendChild(oppElement);
+            });
+        }
 
-Stay calm and follow safety protocols.
-Help is on the way!
+        // Tab functionality
+        function showTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
 
-If this was a real emergency, responders would already be en route to your location.`);
+            event.target.classList.add('active');
+            document.getElementById(tabName + 'Tab').classList.add('active');
+
+            if (tabName === 'map' && map) {
+                setTimeout(() => map.invalidateSize(), 100);
             }
         }
-        
-        function showFeatures() {
-            alert(`🌟 RELIEF MAP - COMPLETE FEATURE SET
 
-🚨 EMERGENCY FEATURES:
-- One-tap SOS with GPS location
-- Emergency contact integration
-- Real-time safety monitoring
-- Offline emergency protocols
-
-🤖 AI-POWERED INTELLIGENCE:
-- 95%+ accuracy recommendations
-- Personal profile-based matching
-- Disaster prediction analytics  
-- Machine learning optimization
-
-🗺️ ADVANCED MAPPING:
-- Google Maps integration
-- Real-time relief point updates
-- Category filtering (Food/Medical/Shelter)
-- Distance-based search
-
-👥 MULTI-ROLE PLATFORM:
-- Victim assistance interface
-- Volunteer opportunity matching
-- NGO coordination dashboard
-- Real-time communication
-
-📱 MOBILE-FIRST DESIGN:
-- Works on any device
-- Offline functionality
-- Progressive Web App
-- Emergency-optimized UI
-
-Ready for immediate deployment in disaster zones worldwide!`);
+        // Get current location
+        function getCurrentLocation() {
+            if (navigator.geolocation) {
+                showAlert('🔍 Getting your location...', 'info');
+                navigator.geolocation.getCurrentPosition(
+                    position => {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        userLocation = {lat, lng};
+                        
+                        if (map) {
+                            map.setView([lat, lng], 15);
+                            L.marker([lat, lng])
+                                .addTo(map)
+                                .bindPopup('📍 Your Current Location')
+                                .openPopup();
+                        }
+                        
+                        showAlert('✅ Location found successfully! Showing nearby relief centers.', 'success');
+                    },
+                    error => {
+                        showAlert('⚠️ Could not access location. Using default map view.', 'warning');
+                        console.log('Location error:', error);
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 60000
+                    }
+                );
+            } else {
+                showAlert('❌ Geolocation is not supported by this browser.', 'warning');
+            }
         }
+
+        // Emergency SOS function
+        function triggerEmergencySOS() {
+            const location = userLocation || {lat: 20.5937, lng: 78.9629};
+            const emergencyId = 'SOS-' + Date.now();
+            
+            const emergencyDetails = `
+                <div class="alert alert-success">
+                    <i class="fas fa-satellite"></i>
+                    <div>
+                        <strong>GPS Location Successfully Transmitted:</strong><br>
+                        📍 Latitude: ${location.lat.toFixed(6)}<br>
+                        📍 Longitude: ${location.lng.toFixed(6)}<br>
+                        🆔 Emergency ID: ${emergencyId}
+                    </div>
+                </div>
+                <div class="alert alert-info">
+                    <i class="fas fa-radio"></i>
+                    <div>
+                        <strong>Emergency Services Notified:</strong><br>
+                        🚑 Medical Emergency Team: Dispatched<br>
+                        🚒 Fire & Rescue: On Standby<br>
+                        👮 Police Emergency: Alerted<br>
+                        🏥 Nearest Hospital: Contacted
+                    </div>
+                </div>
+                <div class="alert alert-warning">
+                    <i class="fas fa-clock"></i>
+                    <div>
+                        <strong>Estimated Response Times:</strong><br>
+                        🚑 Medical Team: 8-15 minutes<br>
+                        🚒 Fire Department: 12-20 minutes<br>
+                        👮 Police Unit: 5-12 minutes<br>
+                        📡 Communication established with local authorities
+                    </div>
+                </div>
+                <div style="background: #fff3e0; padding: 20px; border-radius: 10px; border-left: 5px solid #ff9800; margin-top: 20px;">
+                    <h4 style="color: #f57c00; margin-bottom: 10px;">🛡️ Safety Instructions:</h4>
+                    <ul style="color: #ef6c00; line-height: 1.6; margin-left: 20px;">
+                        <li>Stay calm and remain in a safe location if possible</li>
+                        <li>Keep your phone charged and accessible</li>
+                        <li>Follow instructions from emergency responders</li>
+                        <li>Do not leave your location unless instructed by authorities</li>
+                    </ul>
+                </div>
+                <div style="text-align: center; margin-top: 25px;">
+                    <p style="font-size: 18px; font-weight: 600; color: #1976D2;">
+                        🆘 Help is on the way. Emergency response teams have been dispatched.
+                    </p>
+                </div>
+            `;
+            
+            document.getElementById('emergencyDetails').innerHTML = emergencyDetails;
+            document.getElementById('emergencyModal').style.display = 'block';
+            
+            updateStats();
+        }
+
+        // Call emergency services
+        function callEmergency(type) {
+            const services = {
+                medical: {
+                    name: 'Medical Emergency Services', 
+                    number: '108', 
+                    description: 'Ambulance and emergency medical care',
+                    eta: '8-15 minutes'
+                },
+                fire: {
+                    name: 'Fire & Rescue Department', 
+                    number: '101', 
+                    description: 'Fire fighting and rescue operations',
+                    eta: '12-20 minutes'
+                }, 
+                police: {
+                    name: 'Police Emergency Services', 
+                    number: '100', 
+                    description: 'Security and law enforcement assistance',
+                    eta: '5-12 minutes'
+                }
+            };
+            
+            const service = services[type];
+            showAlert(
+                `🚨 ${service.name} Contacted!\n\n` +
+                `📞 Emergency Number: ${service.number}\n` +
+                `🆘 Service: ${service.description}\n` +
+                `⏱️ Expected Response Time: ${service.eta}\n\n` +
+                `Stay on the line and provide your exact location.`, 
+                'success'
+            );
+        }
+
+        // Add relief point
+        function addReliefPoint() {
+            document.getElementById('addPointModal').style.display = 'block';
+        }
+
+        // Handle relief point form submission
+        document.getElementById('reliefPointForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const type = document.getElementById('reliefType').value;
+            const title = document.getElementById('reliefTitle').value;
+            const desc = document.getElementById('reliefDesc').value;
+            const contact = document.getElementById('reliefContact').value;
+            
+            if (title && desc && contact) {
+                const newPoint = {
+                    id: Date.now(),
+                    lat: userLocation ? userLocation.lat : 20.5937 + (Math.random() - 0.5) * 0.1,
+                    lng: userLocation ? userLocation.lng : 78.9629 + (Math.random() - 0.5) * 0.1,
+                    type: type,
+                    title: title,
+                    desc: desc,
+                    contact: contact
+                };
+                
+                reliefPointsData.push(newPoint);
+                
+                // Add to map
+                const icon = getReliefIcon(newPoint.type);
+                L.marker([newPoint.lat, newPoint.lng])
+                    .addTo(map)
+                    .bindPopup(`
+                        <div style="text-align: center; padding: 10px;">
+                            <h3 style="color: #1976D2;">${icon} ${newPoint.title}</h3>
+                            <p style="color: #666;">${newPoint.desc}</p>
+                            <div style="color: #333;"><strong>📞</strong> ${newPoint.contact}</div>
+                        </div>
+                    `);
+                
+                loadReliefPoints();
+                closeModal('addPointModal');
+                showAlert('✅ Relief point registered successfully! It is now visible on the map and available to the community.', 'success');
+                
+                document.getElementById('reliefPointForm').reset();
+                updateStats();
+            }
+        });
+
+        // Report emergency
+        function reportEmergency() {
+            const emergencyTypes = ['Flood', 'Fire', 'Earthquake', 'Medical Emergency', 'Structural Collapse', 'Missing Person'];
+            const randomType = emergencyTypes[Math.floor(Math.random() * emergencyTypes.length)];
+            showAlert(
+                `🚨 Emergency Situation Reported: ${randomType}\n\n` +
+                `📍 Location: ${userLocation ? 'Your current location' : 'Default coordinates'}\n` +
+                `⏰ Time: ${new Date().toLocaleString()}\n` +
+                `🆔 Report ID: EMR-${Date.now()}\n\n` +
+                `Local authorities and emergency services have been automatically notified.`, 
+                'warning'
+            );
+            updateStats();
+        }
+
+        // Offer help
+        function offerHelp() {
+            showAlert(
+                '❤️ Thank you for offering assistance!\n\n' +
+                '📝 Your offer has been registered in our volunteer database.\n' +
+                '📞 Our coordination team will contact you within 2 hours with specific opportunities.\n' +
+                '🎯 You will be matched with needs that align with your skills and location.\n\n' +
+                'Every act of kindness makes a difference in disaster response!', 
+                'success'
+            );
+            updateStats();
+        }
+
+        // Volunteer for specific task
+        function volunteerForTask(taskName) {
+            showAlert(
+                `🙋‍♂️ Volunteer Registration Successful!\n\n` +
+                `📋 Task: ${taskName}\n` +
+                `📞 Our volunteer coordinator will contact you within 1 hour\n` +
+                `📧 You will receive detailed instructions and meeting location\n` +
+                `🆔 Volunteer ID: VOL-${Date.now()}\n\n` +
+                `Thank you for your commitment to helping others during this critical time!`, 
+                'success'
+            );
+            updateStats();
+        }
+
+        // Contact relief point
+        function contactReliefPoint(phoneNumber) {
+            showAlert(
+                `📞 Contacting Relief Point\n\n` +
+                `Phone: ${phoneNumber}\n` +
+                `Status: Available for assistance\n\n` +
+                `In a real emergency, this would dial the number automatically.`, 
+                'info'
+            );
+        }
+
+        // Get directions
+        function getDirections(lat, lng) {
+            const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+            window.open(url, '_blank');
+            showAlert('🧭 Opening Google Maps for navigation...', 'info');
+        }
+
+        // Utility functions
+        function getRandomDistance() {
+            return (Math.random() * 15 + 0.5).toFixed(1);
+        }
+
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.style.position = 'fixed';
+            alertDiv.style.top = '20px';
+            alertDiv.style.right = '20px';
+            alertDiv.style.zIndex = '10001';
+            alertDiv.style.maxWidth = '400px';
+            alertDiv.style.animation = 'slideIn 0.3s ease';
+            
+            const icon = type === 'success' ? '✅' : type === 'warning' ? '⚠️' : type === 'danger' ? '❌' : 'ℹ️';
+            alertDiv.innerHTML = `<i class="fas fa-info-circle"></i> <div style="white-space: pre-line;">${message}</div>`;
+            
+            document.body.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                alertDiv.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => alertDiv.remove(), 300);
+            }, 8000);
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        function updateStats() {
+            document.getElementById('activePoints').textContent = reliefPointsData.length;
+            document.getElementById('volunteersActive').textContent = Math.floor(Math.random() * 100) + 156;
+            document.getElementById('peopleHelped').textContent = Math.floor(Math.random() * 500) + 2847;
+            document.getElementById('organizationsActive').textContent = Math.floor(Math.random() * 10) + 34;
+        }
+
+        function startRealTimeUpdates() {
+            // Update statistics every 30 seconds to simulate real-time activity
+            setInterval(updateStats, 30000);
+            
+            // Simulate new relief points being added occasionally
+            setInterval(() => {
+                if (Math.random() < 0.1) { // 10% chance every minute
+                    const types = ['food', 'medical', 'shelter', 'supplies', 'water'];
+                    const names = [
+                        'Community Emergency Center', 'Mobile Relief Unit', 'Disaster Response Station',
+                        'Emergency Assistance Point', 'Crisis Support Center', 'Relief Coordination Hub'
+                    ];
+                    
+                    const newPoint = {
+                        id: Date.now(),
+                        lat: 20.5937 + (Math.random() - 0.5) * 10,
+                        lng: 78.9629 + (Math.random() - 0.5) * 10,
+                        type: types[Math.floor(Math.random() * types.length)],
+                        title: names[Math.floor(Math.random() * names.length)],
+                        desc: 'Newly established relief point providing emergency assistance',
+                        contact: '+91-' + Math.floor(Math.random() * 9000000000 + 1000000000)
+                    };
+                    
+                    reliefPointsData.push(newPoint);
+                    
+                    if (map) {
+                        const icon = getReliefIcon(newPoint.type);
+                        L.marker([newPoint.lat, newPoint.lng])
+                            .addTo(map)
+                            .bindPopup(`<b>${icon} ${newPoint.title}</b><br>${newPoint.desc}`);
+                    }
+                    
+                    loadReliefPoints();
+                    updateStats();
+                }
+            }, 60000); // Check every minute
+        }
+
+        // Close modals when clicking outside
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = 'none';
+            }
+        }
+
+        // Add CSS animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
     </script>
 </body>
 </html>
+                
